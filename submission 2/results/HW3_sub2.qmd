@@ -15,6 +15,8 @@ You can access the [https://github.com/rscholt/HW3]()
 # 1 Bar Graph
 
 ```{python}
+
+#| echo: false  # Hides code but keeps output
 #summarize data
 #import data
 import pandas as pd
@@ -61,6 +63,8 @@ plt.grid(True)
 plt.show()
 
 ```
+\newpage
+
 # 3 
  5 highest states in legend
 ```{python}
@@ -90,6 +94,8 @@ plt.grid(True)
 plt.show()
 
 ```
+\newpage
+
 # 4 
  5 lowest states in legend
 
@@ -111,6 +117,8 @@ plt.legend()
 plt.grid(True)
 plt.show()
 ```
+\newpage
+
 # 5
 
 ```{python}
@@ -132,6 +140,8 @@ plt.show()
 
 ```
 Both start with similar sales per capita, but the states with the highest price increases have a steeper decline in sales per capita compared to the states with the smallest price increases. You can see this as they all end with a lower number of packs sold per capita than all the red(low price increase) states. This suggests that significant price increases do decrease cigarette sales per capita further. I like this graph more than the mean to show it is not just an average effect due to outlier but a comprehensive trend and the graph is still very clear with the colors.
+
+\newpage
 
 # 7
 OLS 1970-1990
@@ -156,6 +166,7 @@ model = sm.OLS(Y, X).fit()
 print(model.summary())
 
 ```
+\newpage
 
 # 8a
 first stage 1970-1990
@@ -170,6 +181,7 @@ print(step1.summary())
 
 ```
 
+\newpage
 
 # 8b 
 second stage 1970-1990
@@ -187,6 +199,7 @@ print(step2.summary())
 the value of OLS without the instrument is -0.809 and with the instrument is -0.923.  This means that a 1% increase in price will decrease sales per capita by 0.81% or 0.92%. They are different and this is due the the endogeneity in the naive estimate. For example a state could increase the tax rate because it has a high smoking rate, and this would bias the estimate.
 
 \newpage
+
 
 # 9a
 OLS 1991-2015
@@ -301,6 +314,8 @@ print(results_table.to_string(index=False, line_width=100))
 ```
 
 The trend of the increase in effect shown by the IV estimate is consistent in both time periods. This is due to the same issues of endogeneity in both time periods. Comparing the two time periods, the effect of the price increase on sales per capita is larger in the second time period. This could be due to the fact that the taxes increased more steaply in the second time period. Another explaination for a higher elasticity in the second time period (less addictive/ more price sensitive) could be that cultural values have shifted due to more education on the health risks of smoking or preferences. Another explanation could be that increases access to alternative like E-cigarettes or other smoking cessation products.
+
+\newpage
 
 # attempt with pyfixest package 
 
