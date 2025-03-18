@@ -1,0 +1,344 @@
+---
+title: "Homework 3"
+subtitle: "Research Methods, Spring 2025"
+author: "Ryan Scholte"
+format:
+  pdf:
+    output-file: "Scholte-i-hw3-2"
+    output-ext: "pdf"
+    header-includes:
+      - \usepackage{float}
+      - \floatplacement{table}{H}
+jupyter: python3
+---
+You can access the [https://github.com/rscholt/HW3]()
+# 1 Bar Graph
+
+```{python}
+#summarize data
+#import data
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.api as sm
+import pyfixest as pf
+import warnings
+
+#load data
+data = pd.read_csv('/Users/ryanscholte/Desktop/GitHub/HW3/data/output/tax_data.csv')
+#show head
+# print(data.head())
+
+#Present a bar graph showing the proportion of states with a change in their cigarette tax in each year.
+data = data.sort_values(by=['state', 'Year'])
+#limit data year between 1970 and 1985
+dataq1=data[(data['Year']>=1970) & (data['Year']<=1985)]
+dataq1['tax_change'] = dataq1.groupby('state')['tax_state'].diff().ne(0).astype(int)
+tax_change_proportion = dataq1.groupby('Year')['tax_change'].mean()
+# print(tax_change_proportion)
+plt.bar(tax_change_proportion.index, tax_change_proportion.values)
+plt.title('Proportion of States with Cigarette Tax Change (1970-1985)')
+plt.xlabel('Year')
+plt.show()
+
+
+```
+# 2
+```{python}
+#| echo: false  # Hides code but keeps output
+avg_values = data.groupby('Year')[['tax_2012', 'price_cpi']].mean()
+
+
+#line graph
+plt.plot(avg_values.index, avg_values['tax_2012'], label='Average Tax (2012 dollars)')
+plt.plot(avg_values.index, avg_values['price_cpi'], label='Average Price (2012 dollars)')
+plt.legend()
+plt.title('Cigarette Tax and Price in 2012 Dollars (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Dollars (2012 value)')
+plt.grid(True)
+plt.show()
+
+```
+# 3 
+ 5 highest states in legend
+```{python}
+#| echo: false  # Hides code but keeps output
+# Filter for years 1970-2018
+dataq3 = data[(data['Year'] >= 1970) & (data['Year'] <= 2018)]
+
+# Compute the price difference between 1970 and 2018
+price_change = dataq3.groupby('state')['price_cpi'].agg(['first', 'last'])
+price_change['price_increase'] = price_change['last'] - price_change['first']
+
+#top 5 states with the highest price increase
+big_5_states = price_change.nlargest(5, 'price_increase').index.tolist()
+big_5_data = dataq3[dataq3['state'].isin(big_5_states)]
+
+plt.figure(figsize=(10, 6))
+for state in big_5_states:
+    state_data = big_5_data[big_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state)
+
+plt.title('Average Packs Sold Per Capita in Top 5 States with Highest Price Increases (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Packs Sold Per Capita')
+plt.legend()
+plt.grid(True)
+
+plt.show()
+
+```
+# 4 
+ 5 lowest states in legend
+
+```{python}
+#| echo: false  # Hides code but keeps output
+
+small_5_states = price_change.nsmallest(5, 'price_increase').index.tolist()
+small_5_data = dataq3[dataq3['state'].isin(small_5_states)]
+
+plt.figure(figsize=(10, 6))
+for state in small_5_states:
+    state_data = small_5_data[small_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state)
+
+plt.title('Average Packs Sold Per Capita in Top 5 States with Smallest Price Increases (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Packs Sold Per Capita')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+# 5
+
+```{python}
+#| echo: false  # Hides code but keeps output
+#overlay the two graphs and make all lines of one graph the same color
+plt.figure(figsize=(10, 6))
+for state in big_5_states:
+    state_data = big_5_data[big_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state, color='blue')
+for state in small_5_states:
+    state_data = small_5_data[small_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state, color='red')
+plt.title('Average Packs Sold Per Capita in Top 5 States with Biggest & Smallest Price Increases (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Packs Sold Per Capita')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+```
+Both start with similar sales per capita, but the states with the highest price increases have a steeper decline in sales per capita compared to the states with the smallest price increases. You can see this as they all end with a lower number of packs sold per capita than all the red(low price increase) states. This suggests that significant price increases do decrease cigarette sales per capita further. I like this graph more than the mean to show it is not just an average effect due to outlier but a comprehensive trend and the graph is still very clear with the colors.
+
+# 7
+OLS 1970-1990
+
+```{python}
+#| echo: false  # Hides code but keeps output
+
+#estimate ATE's for 1970 to 1990
+
+cig_data = data[(data['Year'] >= 1970) & (data['Year'] <= 1990)]
+
+cig_data['ln_sales'] = np.log(cig_data['sales_per_capita'])
+cig_data['ln_price'] = np.log(cig_data['price_cpi'])
+cig_data['ln_total_tax'] = np.log(cig_data['tax_dollar'])
+
+
+#  OLS 
+X = sm.add_constant(cig_data['ln_price'])  # Add constant for intercept
+Y = cig_data['ln_sales']
+
+model = sm.OLS(Y, X).fit()
+print(model.summary())
+
+```
+
+# 8a
+first stage 1970-1990
+
+```{python}
+#| echo: false  # Hides code but keeps output
+
+# First stage
+step1 = sm.OLS(cig_data['ln_price'], sm.add_constant(cig_data['ln_total_tax'])).fit()
+print("First-stage Regression (ln_price ~ ln_total_tax):\n")
+print(step1.summary())
+
+```
+
+
+# 8b 
+second stage 1970-1990
+```{python}
+#| echo: false  # Hides code but keeps output
+# Log prices from the first stage
+pricehat = step1.predict(sm.add_constant(cig_data['ln_total_tax']))
+
+# Second-stage regression (IV Regression)
+step2 = sm.OLS(cig_data['ln_sales'], sm.add_constant(pricehat)).fit()
+print("\nSecond-stage Regression (ln_sales ~ pricehat):\n")
+print(step2.summary())
+
+```
+the value of OLS without the instrument is -0.809 and with the instrument is -0.923.  This means that a 1% increase in price will decrease sales per capita by 0.81% or 0.92%. They are different and this is due the the endogeneity in the naive estimate. For example a state could increase the tax rate because it has a high smoking rate, and this would bias the estimate.
+
+\newpage
+
+# 9a
+OLS 1991-2015
+```{python}
+#| echo: false  # Hides code but keeps output
+#estimate ATE's for 1991 to 2015
+cig_data2 = data[(data['Year'] >= 1991) & (data['Year'] <= 2015)]
+
+cig_data2['ln_sales'] = np.log(cig_data2['sales_per_capita'])
+cig_data2['ln_price'] = np.log(cig_data2['price_cpi'])
+cig_data2['ln_total_tax'] = np.log(cig_data2['tax_dollar'])
+
+
+#  OLS 
+X2 = sm.add_constant(cig_data2['ln_price'])  
+Y2 = cig_data2['ln_sales']
+
+model2 = sm.OLS(Y2, X2).fit()
+print(model2.summary())
+
+```
+
+
+# 9b
+first stage 1991-2015
+
+```{python}
+#| echo: false  # Hides code but keeps output
+# First stage
+step1_2 = sm.OLS(cig_data2['ln_price'], sm.add_constant(cig_data2['ln_total_tax'])).fit()
+print("First-stage Regression (ln_price ~ ln_total_tax):\n")
+print(step1_2.summary())
+
+```
+
+# 9c
+second stage 1991-2015
+
+```{python}
+#| echo: false  # Hides code but keeps output
+
+# Log prices from the first stage
+pricehat_2 = step1_2.predict(sm.add_constant(cig_data2['ln_total_tax']))
+
+# Second stage
+step2_2 = sm.OLS(cig_data2['ln_sales'], sm.add_constant(pricehat_2)).fit()
+print("\nSecond-stage Regression (ln_sales ~ pricehat):\n")
+print(step2_2.summary())
+
+```
+
+\newpage
+
+# 10
+```{python}
+#| echo: false  # Hides code but keeps output
+
+
+def get_intercept(model):
+    # Check for common intercept labels
+    for label in ['Intercept', 'const']:
+        if label in model.params:
+            return model.params[label]
+    
+    # Fallback for positional intercept if labels are unreliable
+    if len(model.params) == 2:
+        return model.params[0] if 'ln_price' not in model.params.index[0] else model.params[1]
+    elif len(model.params) > 2:
+        # If there are multiple coefficients, assume the last one is intercept if unnamed
+        return model.params[-1]
+
+    return None 
+
+# Assuming model, step2, model2, and step2_2 are your regression results objects
+results_table = pd.DataFrame({
+    'Time Period': ['1970-1990', '1970-1990', '1991-2015', '1991-2015'],
+    'Model': ['OLS1', 'IV1', 'OLS2', 'IV2'],
+    'ATE (Price Elasticity)': [
+        model.params['ln_price'],
+        step2.params[0],
+        model2.params['ln_price'],
+        step2_2.params[0]
+    ],
+    'P-Value': [
+        model.pvalues['ln_price'],
+        step2.pvalues[0],
+        model2.pvalues['ln_price'],
+        step2_2.pvalues[0]
+    ],
+    'Intercept': [
+        get_intercept(model),
+        get_intercept(step2),
+        get_intercept(model2),
+        get_intercept(step2_2)
+    ],
+    'Standard Error': [
+        model.bse['ln_price'],
+        step2.bse[0],
+        model2.bse['ln_price'],
+        step2_2.bse[0]
+    ],
+    'R^2': [
+        model.rsquared if hasattr(model, 'rsquared') else None,
+        step2.rsquared if hasattr(step2, 'rsquared') else None,
+        model2.rsquared if hasattr(model2, 'rsquared') else None,
+        step2_2.rsquared if hasattr(step2_2, 'rsquared') else None
+    ]
+})
+
+# Print the table without the index and with lines between each column/row
+print(results_table.to_string(index=False, line_width=100))
+```
+
+The trend of the increase in effect shown by the IV estimate is consistent in both time periods. This is due to the same issues of endogeneity in both time periods. Comparing the two time periods, the effect of the price increase on sales per capita is larger in the second time period. This could be due to the fact that the taxes increased more steaply in the second time period. Another explaination for a higher elasticity in the second time period (less addictive/ more price sensitive) could be that cultural values have shifted due to more education on the health risks of smoking or preferences. Another explanation could be that increases access to alternative like E-cigarettes or other smoking cessation products.
+
+# attempt with pyfixest package 
+
+ATE results not as close still trying to see whats wrong. also cant get the table to display nicely working on all that., but trends are similar
+
+```{python}
+#| echo: false  # Hides code but keeps output
+# # Define data subsets
+data1 = data[(data['Year'] >= 1970) & (data['Year'] <= 1990)]
+data2 = data[(data['Year'] >= 1991) & (data['Year'] <= 2015)]
+
+data1['ln_sales'] = np.log(data1['sales_per_capita'])
+data1['ln_price_2012'] = np.log(data1['price_cpi'])
+data1['ln_tax_2012'] = np.log(data1['tax_2012'])
+
+data2['ln_sales'] = np.log(data2['sales_per_capita'])
+data2['ln_price_2012'] = np.log(data2['price_cpi'])
+data2['ln_tax_2012'] = np.log(data2['tax_2012'])
+
+# OLS and IV models for 1970-1990
+ols1 = pf.feols(fml='ln_sales ~ ln_price_2012', data=data1)
+iv1 = pf.feols(fml='ln_sales ~ 1 | ln_price_2012 ~ ln_tax_2012', data=data1)
+
+
+# OLS and IV models for 1991-2015
+ols2 = pf.feols(fml='ln_sales ~ ln_price_2012', data=data2)
+iv2 = pf.feols(fml='ln_sales ~ 1 | ln_price_2012 ~ ln_tax_2012', data=data2)
+
+# Display results using pf.etable()
+pf.etable([ols1, iv1, ols2, iv2],  # Models should be in a list format
+          labels={
+              'ols1': 'OLS (1970-1990)',
+              'iv1': 'IV (1970-1990)',
+              'ols2': 'OLS (1991-2015)',
+              'iv2': 'IV (1991-2015)'
+          },
+          type='df',        # Display as a pandas DataFrame
+          show_se=True,     # Show standard errors
+          show_notes=True)  # Add significance notes at the bottom
+
+```
