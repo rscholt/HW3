@@ -180,6 +180,8 @@ iv2 = pf.feols(fml='ln_sales ~ 1 | ln_price_2012 ~ ln_tax_2012', data=data2)
 reduced2 = pf.feols(fml='ln_sales ~ ln_tax_2012', data=data2)
 
 ```
+
+###           Elasticity Estimates from OLS and IV Models
 ```{python}
 #| echo: false  # Hides code but keeps output
 #| warning: false
@@ -313,16 +315,12 @@ final_table.index = [''] * len(final_table)
 # Round numerical values
 final_table = final_table.applymap(lambda x: round(x, 3) if isinstance(x, (int, float)) else x)
 
-# Add the title
-final_table_styled = final_table.style.set_caption("Elasticity Estimates from OLS and IV Models")
-
-# Display the final table
-final_table_styled
+final_table
 ```
 
 
-the value of OLS without the instrument is -0.809 and with the instrument is -0.923.  This means that a 1% increase in price will decrease sales per capita by 0.81% or 0.92%. They are different and this is due the the endogeneity in the naive estimate. For example a state could increase the tax rate because it has a high smoking rate, and this would bias the estimate.
+Question 7. The value of OLS without the instrument is -0.809 and with the instrument is -0.923.  This means that a 1% increase in price will decrease sales per capita by 0.81% or 0.92%. They are different and this is due the the endogeneity in the naive estimate. For example a state could increase the tax rate because it has a high smoking rate, and this would bias the estimate.
 
 
-The trend of the increase in effect shown by the IV estimate is consistent in both time periods. This is due to the same issues of endogeneity in both time periods. Comparing the two time periods, the effect of the price increase on sales per capita is larger in the second time period. This could be due to the fact that the taxes increased more steaply in the second time period. Another explaination for a higher elasticity in the second time period (less addictive/ more price sensitive) could be that cultural values have shifted due to more education on the health risks of smoking or preferences. Another explanation could be that increases access to alternative like E-cigarettes or other smoking cessation products.
+Question 10. The trend of the increase in effect shown by the IV estimate is consistent in both time periods. This is due to the same issues of endogeneity in both time periods. Comparing the two time periods, the effect of the price increase on sales per capita is larger in the second time period. This could be due to the fact that the taxes increased more steaply in the second time period. Another explaination for a higher elasticity in the second time period (less addictive/ more price sensitive) could be that cultural values have shifted due to more education on the health risks of smoking or preferences. Another explanation could be that increases access to alternative like E-cigarettes or other smoking cessation products.
 
