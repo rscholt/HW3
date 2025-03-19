@@ -1,0 +1,328 @@
+---
+title: "Homework 3"
+subtitle: "Research Methods, Spring 2025"
+author: "Ryan Scholte"
+format:
+  pdf:
+    output-file: "Scholte-i-hw3-3"
+    output-ext: "pdf"
+    header-includes:
+      - \usepackage{float}
+      - \floatplacement{table}{H}
+jupyter: python3
+---
+You can access the [Repository](https://github.com/rscholt/HW3)
+
+# 1 Bar Graph
+
+```{python}
+
+#| echo: false  # Hides code but keeps output
+#summarize data
+#import data
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.api as sm
+import pyfixest as pf
+import warnings
+warnings.filterwarnings('ignore')
+
+#load data
+data = pd.read_csv('/Users/ryanscholte/Desktop/GitHub/HW3/data/output/tax_data.csv')
+#show head
+# print(data.head())
+
+#Present a bar graph showing the proportion of states with a change in their cigarette tax in each year.
+data = data.sort_values(by=['state', 'Year'])
+#limit data year between 1970 and 1985
+dataq1=data[(data['Year']>=1970) & (data['Year']<=1985)]
+dataq1['tax_change'] = dataq1.groupby('state')['tax_state'].diff().ne(0).astype(int)
+tax_change_proportion = dataq1.groupby('Year')['tax_change'].mean()
+# print(tax_change_proportion) and exclude first year
+tax_change_proportion = tax_change_proportion[1:]
+plt.bar(tax_change_proportion.index, tax_change_proportion.values)
+plt.title('Proportion of States with Cigarette Tax Change (1970-1985)')
+plt.xlabel('Year')
+plt.show()
+
+
+
+```
+# 2
+```{python}
+#| echo: false  # Hides code but keeps output
+avg_values = data.groupby('Year')[['tax_2012', 'price_cpi']].mean()
+
+
+#line graph
+plt.plot(avg_values.index, avg_values['tax_2012'], label='Average Tax (2012 dollars)')
+plt.plot(avg_values.index, avg_values['price_cpi'], label='Average Price (2012 dollars)')
+plt.legend()
+plt.title('Cigarette Tax and Price in 2012 Dollars (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Dollars (2012 value)')
+plt.grid(True)
+plt.show()
+
+```
+\newpage
+
+# 3 
+ 5 highest states in legend
+```{python}
+#| echo: false  # Hides code but keeps output
+# Filter for years 1970-2018
+dataq3 = data[(data['Year'] >= 1970) & (data['Year'] <= 2018)]
+
+# Compute the price difference between 1970 and 2018
+price_change = dataq3.groupby('state')['price_cpi'].agg(['first', 'last'])
+price_change['price_increase'] = price_change['last'] - price_change['first']
+
+#top 5 states with the highest price increase
+big_5_states = price_change.nlargest(5, 'price_increase').index.tolist()
+big_5_data = dataq3[dataq3['state'].isin(big_5_states)]
+
+plt.figure(figsize=(10, 6))
+for state in big_5_states:
+    state_data = big_5_data[big_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state)
+
+plt.title('Average Packs Sold Per Capita in Top 5 States with Highest Price Increases (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Packs Sold Per Capita')
+plt.legend()
+plt.grid(True)
+
+plt.show()
+
+```
+\newpage
+
+# 4 
+ 5 lowest states in legend
+
+```{python}
+#| echo: false  # Hides code but keeps output
+
+small_5_states = price_change.nsmallest(5, 'price_increase').index.tolist()
+small_5_data = dataq3[dataq3['state'].isin(small_5_states)]
+
+plt.figure(figsize=(10, 6))
+for state in small_5_states:
+    state_data = small_5_data[small_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state)
+
+plt.title('Average Packs Sold Per Capita in Top 5 States with Smallest Price Increases (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Packs Sold Per Capita')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+\newpage
+
+# 5
+
+```{python}
+#| echo: false  # Hides code but keeps output
+#overlay the two graphs and make all lines of one graph the same color
+plt.figure(figsize=(10, 6))
+for state in big_5_states:
+    state_data = big_5_data[big_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state, color='blue')
+for state in small_5_states:
+    state_data = small_5_data[small_5_data['state'] == state]
+    plt.plot(state_data['Year'], state_data['sales_per_capita'].rolling(window=3).mean(), label=state, color='red')
+plt.title('Average Packs Sold Per Capita in Top 5 States with Biggest & Smallest Price Increases (1970-2018)')
+plt.xlabel('Year')
+plt.ylabel('Packs Sold Per Capita')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+```
+Both start with similar sales per capita, but the states with the highest price increases have a steeper decline in sales per capita compared to the states with the smallest price increases. You can see this as they all end with a lower number of packs sold per capita than all the red(low price increase) states. This suggests that significant price increases do decrease cigarette sales per capita further. I like this graph more than the mean to show it is not just an average effect due to outlier but a comprehensive trend and the graph is still very clear with the colors.
+
+\newpage
+
+# 7-10
+```{python}
+#| echo: false  # Hides code but keeps output
+#| results: hide  # Hides the output
+#| warning: false
+
+import warnings
+warnings.filterwarnings('ignore')
+
+# # Define data subsets
+data1 = data[(data['Year'] >= 1970) & (data['Year'] <= 1990)]
+data2 = data[(data['Year'] >= 1991) & (data['Year'] <= 2015)]
+
+data1['ln_sales'] = np.log(data1['sales_per_capita'])
+data1['ln_price_2012'] = np.log(data1['price_cpi'])
+data1['ln_tax_2012'] = np.log(data1['tax_2012'])
+
+data2['ln_sales'] = np.log(data2['sales_per_capita'])
+data2['ln_price_2012'] = np.log(data2['price_cpi'])
+data2['ln_tax_2012'] = np.log(data2['tax_2012'])
+
+# OLS and IV models for 1970-1990
+ols1 = pf.feols(fml='ln_sales ~ ln_price_2012', data=data1)
+iv1 = pf.feols(fml='ln_sales ~ 1 | ln_price_2012 ~ ln_tax_2012', data=data1)
+r1 = pf.feols(fml='ln_sales ~ ln_tax_2012', data=data1)
+
+
+# OLS and IV models for 1991-2015
+ols2 = pf.feols(fml='ln_sales ~ ln_price_2012', data=data2)
+iv2 = pf.feols(fml='ln_sales ~ 1 | ln_price_2012 ~ ln_tax_2012', data=data2)
+reduced2 = pf.feols(fml='ln_sales ~ ln_tax_2012', data=data2)
+
+```
+```{python}
+#| echo: false  # Hides code but keeps output
+#| warning: false
+# ols1, iv1, ols2, iv2, r1, r2 are already defined
+results = [ols1, iv1, ols2, iv2, iv1._model_1st_stage, iv2._model_1st_stage, r1, reduced2]
+
+# Extract coefficients, SEs, N, and R2 from the results
+def extract_results(model):
+    if hasattr(model, 'coef'):
+        # Extract coefficients for both variables
+        coef_price = model.coef().get('ln_price_2012', None)  # Coefficient for ln_price_2012
+        coef_tax = model.coef().get('ln_tax_2012', None)     # Coefficient for ln_tax_2012
+        
+        # Extract standard errors for both variables
+        se_price = model.se().get('ln_price_2012', None) if hasattr(model, 'se') else None
+        se_tax = model.se().get('ln_tax_2012', None) if hasattr(model, 'se') else None
+        
+        # Extract sample size and R-squared
+        n = model._N
+        r2 = model._r2
+        
+        return coef_price, se_price, coef_tax, se_tax, n, r2
+    else:
+        return None, None, None, None, None, None
+
+# Create a list to store the extracted results
+table_data = []
+
+# Loop through each model and extract results
+for model in results:
+    coef_price, se_price, coef_tax, se_tax, n, r2 = extract_results(model)
+    table_data.append({
+        'Coefficient (Price)': coef_price,
+        'Standard Error (Price)': f'({se_price})' if se_price else '',
+        'Coefficient (Tax)': coef_tax,
+        'Standard Error (Tax)': f'({se_tax})' if se_tax else '',
+        'N': n,
+        'R2': r2
+    })
+
+# Convert the list of dictionaries to a DataFrame
+etable_df = pd.DataFrame(table_data)
+
+# Function to round standard errors (which are stored as strings like "(0.0123)")
+def round_standard_error(se_str):
+    if isinstance(se_str, str) and se_str.startswith('(') and se_str.endswith(')'):
+        try:
+            # Extract the numeric value, round it, and reformat it as a string
+            se_value = float(se_str[1:-1])
+            return f'({round(se_value, 3)})'
+        except ValueError:
+            # If conversion fails, return the original string
+            return se_str
+    else:
+        # If it's not a standard error string, return it as is
+        return se_str
+
+# Apply the rounding function to standard error columns
+etable_df['Standard Error (Price)'] = etable_df['Standard Error (Price)'].apply(round_standard_error)
+etable_df['Standard Error (Tax)'] = etable_df['Standard Error (Tax)'].apply(round_standard_error)
+
+import pandas as pd
+
+# Adding spacing rows and italicizing labels
+section_labels = [
+    'Log Price', 'Standard Error', 'N', 'R2',
+    '',  # Break before REDUCED FORM
+    'REDUCED FORM',  # Italicized Section Label
+    'Log Tax', 'Standard Error', 'N', 'R2',
+    '',  # Break before FIRST STAGE
+    'FIRST STAGE',  # Italicized Section Label
+    'Log Tax', 'Standard Error', 'N', 'R2'
+]
+
+# Create the final table structure
+final_table = pd.DataFrame({
+    ('', ''): section_labels,
+    ('1970 - 1990', 'OLS'): [
+        etable_df.loc[0, 'Coefficient (Price)'], etable_df.loc[0, 'Standard Error (Price)'],
+        etable_df.loc[0, 'N'], etable_df.loc[0, 'R2'],
+        '',  # Break
+        '',  # Reduced Form Divider (Italicized)
+        '', '',
+        '', '',
+        '',  # Break
+        '',  # First Stage Divider (Italicized)
+        '', '',
+        '', ''
+    ],
+    ('1970 - 1990', 'IV'): [
+        etable_df.loc[1, 'Coefficient (Price)'], etable_df.loc[1, 'Standard Error (Price)'],
+        etable_df.loc[1, 'N'], etable_df.loc[1, 'R2'],
+        '',  # Break
+        '',  
+        etable_df.loc[6, 'Coefficient (Tax)'], etable_df.loc[6, 'Standard Error (Tax)'],
+        etable_df.loc[6, 'N'], etable_df.loc[6, 'R2'],
+        '',  # Break
+        '',
+        etable_df.loc[4, 'Coefficient (Tax)'], etable_df.loc[4, 'Standard Error (Tax)'],
+        etable_df.loc[4, 'N'], etable_df.loc[4, 'R2']
+    ],
+    ('1991 - 2015', 'OLS'): [
+        etable_df.loc[2, 'Coefficient (Price)'], etable_df.loc[2, 'Standard Error (Price)'],
+        etable_df.loc[2, 'N'], etable_df.loc[2, 'R2'],
+        '',  # Break
+        '',
+        '', '',
+        '', '',
+        '',  # Break
+        '',
+        '', '',
+        '', ''
+    ],
+    ('1991 - 2015', 'IV'): [
+        etable_df.loc[3, 'Coefficient (Price)'], etable_df.loc[3, 'Standard Error (Price)'],
+        etable_df.loc[3, 'N'], etable_df.loc[3, 'R2'],
+        '',  # Break
+        '',
+        etable_df.loc[7, 'Coefficient (Tax)'], etable_df.loc[7, 'Standard Error (Tax)'],
+        etable_df.loc[7, 'N'], etable_df.loc[7, 'R2'],
+        '',  # Break
+        '',
+        etable_df.loc[5, 'Coefficient (Tax)'], etable_df.loc[5, 'Standard Error (Tax)'],
+        etable_df.loc[5, 'N'], etable_df.loc[5, 'R2']
+    ]
+})
+
+# Remove the default index for a cleaner look
+final_table.index = [''] * len(final_table)
+
+# Round numerical values
+final_table = final_table.applymap(lambda x: round(x, 3) if isinstance(x, (int, float)) else x)
+
+# Add the title
+final_table_styled = final_table.style.set_caption("Elasticity Estimates from OLS and IV Models")
+
+# Display the final table
+final_table_styled
+```
+
+
+the value of OLS without the instrument is -0.809 and with the instrument is -0.923.  This means that a 1% increase in price will decrease sales per capita by 0.81% or 0.92%. They are different and this is due the the endogeneity in the naive estimate. For example a state could increase the tax rate because it has a high smoking rate, and this would bias the estimate.
+
+
+The trend of the increase in effect shown by the IV estimate is consistent in both time periods. This is due to the same issues of endogeneity in both time periods. Comparing the two time periods, the effect of the price increase on sales per capita is larger in the second time period. This could be due to the fact that the taxes increased more steaply in the second time period. Another explaination for a higher elasticity in the second time period (less addictive/ more price sensitive) could be that cultural values have shifted due to more education on the health risks of smoking or preferences. Another explanation could be that increases access to alternative like E-cigarettes or other smoking cessation products.
+
